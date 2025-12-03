@@ -1,59 +1,104 @@
 <!--components/results-table/results-table.component.html-->
 
-<!-- Simple inline error display for table actions -->
-<div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
+<div class="table-wrap">
+  <div class="table-meta">
+    <div>
+      <p class="eyebrow">Results</p>
+      <strong>{{ total }} matches</strong> • Page {{ pageIndex + 1 }} of {{ totalPages(total, pageSize) }}
+    </div>
+    <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  </div>
 
-<!-- Headers so be sortable on a click
-      (click)="onHeaderClick(h.field)"
-      columns are as follows
-        - the expansion column no text but for an expander button
-        - partNumber
-        - supplierSku
-        - description
-        - branch
-        - availableQty
-        - uom
-        - leadTimeDays
-        - lastPurchaseDate
-        - Action peak availability button)
- -->
-<table>
-  <thead>
+  <table>
+    <thead>
+      <tr>
+        <th class="expander"></th>
+        <th *ngFor="let h of headers" [class.sortable]="h.sortable" (click)="isSortableHeader(h) && onHeaderClick(h.field)">
+          {{ h.label }}
+          <span class="sort-indicator" *ngIf="h.sortable && currentSort?.field === h.field">
+            {{ currentSort?.direction === 'asc' ? '▲' : '▼' }}
+          </span>
+        </th>
+        <th>Peak availability</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngIf="items?.length; else emptyState">
+        <ng-container *ngFor="let item of items">
+          <tr>
+            <td class="expander">
+              <button (click)="toggleExpand(item)" aria-label="expand row">
+                {{ expanded[rowKey(item)] ? '▾' : '▸' }}
+              </button>
+            </td>
+            <td>{{ item.partNumber }}</td>
+            <td>{{ item.supplierSku }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ item.branch }}</td>
+            <td class="num">{{ item.availableQty }}</td>
+            <td>{{ item.uom }}</td>
+            <td class="num">{{ item.leadTimeDays ?? '—' }}</td>
+            <td class="date">{{ item.lastPurchaseDate ? (item.lastPurchaseDate | date:'MMM d, y, h:mm a') : '—' }}</td>
+            <td>
+              <button type="button" (click)="onPeakButton(item)" [disabled]="peakLoading[item.partNumber]">
+                <span *ngIf="peakLoading[item.partNumber]">Loading...</span>
+                <span *ngIf="!peakLoading[item.partNumber]">Peak availability</span>
+              </button>
+            </td>
+          </tr>
 
-  </thead>
-<!-- Data rows
-hint use <button (click)="toggleExpand(item)" aria-label="expand row">▸</button>
-with appropriate class to expand/collapse the row on first column click
-use           (click)="onPeakButton(item)" for peakAvailability button
-on clicking the button should be disabled with a loading indicator then once the data is loaded the
-button should go back to normal state and the data appears below the row and the lot information
-Note befoe the data appears the message No peak availability loaded yet. Should be displayed
-This button should also display the Lot information similar to the expander button at the beginning
-The expander button the display the No peak availability loaded yet if not yet loaded
+          <tr class="expand-row" *ngIf="expanded[rowKey(item)]">
+            <td></td>
+            <td colspan="9">
+              <div class="expand-content">
+                <div>
+                  <h4>Lots</h4>
+                  <ng-container *ngIf="item.lots?.length; else noLots">
+                    <div class="lot" *ngFor="let lot of item.lots">
+                      Lot {{ lot.lotNumber }} - Qty {{ lot.qty }} - Exp {{ lot.expirationDate || 'N/A' }}
+                    </div>
+                  </ng-container>
+                  <ng-template #noLots>
+                    <p class="muted">No lot information available.</p>
+                  </ng-template>
+                </div>
 
-Expanded section should be like
+                <div>
+                  <h4>Peak availability</h4>
+                  <ng-container *ngIf="peakByPart[item.partNumber]; else noPeak">
+                    <div class="peak-line"><strong>Part:</strong> {{ peakByPart[item.partNumber]?.partNumber || item.partNumber }}</div>
+                    <div class="peak-line"><strong>Total available:</strong> {{ peakByPart[item.partNumber]?.totalAvailable ?? 0 }}</div>
+                    <div class="peak-line"><strong>By branch:</strong></div>
+                    <div class="branch" *ngFor="let b of peakByPart[item.partNumber]?.branches">
+                      {{ b.branch }}: {{ b.qty }}
+                    </div>
+                  </ng-container>
+                  <ng-template #noPeak>
+                    <p class="muted">No peak availability loaded yet.</p>
+                  </ng-template>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </ng-container>
+    </tbody>
+  </table>
 
-Lots
-   Lot {{ lot.lotNumber }} — Qty {{ lot.qty }} — Exp {{ lot.expirationDate || 'N/A' }}
-   Lot {{ lot.lotNumber }} — Qty {{ lot.qty }} — Exp {{ lot.expirationDate || 'N/A' }}
-   Lot {{ lot.lotNumber }} — Qty {{ lot.qty }} — Exp {{ lot.expirationDate || 'N/A' }}
+  <ng-template #emptyState>
+    <tr>
+      <td colspan="10" class="empty-state">
+        <p>No results found.</p>
+      </td>
+    </tr>
+  </ng-template>
 
- <strong>Part:</strong> {{ peak?.partNumber || item.partNumber }}
- <strong>Total available:</strong> {{ peak?.totalAvailable ?? 0 }}
- <strong>By branch:</strong>
-{{ b.branch }}: {{ b.qty }}
-{{ b.branch }}: {{ b.qty }}
-  -->
-  <tbody>
 
-  </tbody>
-</table>
-
-<!-- Simple pagination controls  -->
-<div class="pager" aria-label="Pagination">
-  <button type="button" (click)="goTo(pageIndex - 1)" [disabled]="pageIndex <= 0">Prev</button>
-  <span>Page {{ pageIndex + 1 }} / {{ totalPages(total, pageSize) }}</span>
-  <button type="button" (click)="goTo(pageIndex + 1)" [disabled]="pageIndex >= totalPages(total, pageSize) - 1">
-    Next
-  </button>
-</div>
+  <!-- Simple pagination controls  -->
+  <div class="pager" aria-label="Pagination">
+    <button type="button" (click)="goTo(pageIndex - 1)" [disabled]="pageIndex <= 0">Prev</button>
+    <span>Page {{ pageIndex + 1 }} / {{ totalPages(total, pageSize) }}</span>
+    <button type="button" (click)="goTo(pageIndex + 1)" [disabled]="pageIndex >= totalPages(total, pageSize) - 1">
+      Next
+    </button>
+  </div>
