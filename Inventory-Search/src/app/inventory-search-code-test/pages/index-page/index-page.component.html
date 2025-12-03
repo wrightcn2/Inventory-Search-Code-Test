@@ -1,35 +1,77 @@
 <!--pages/index-page/index-page.component.html -->
 
 <!-- HTML -->
-<!-- class="inventory-search"
- this is the ugly display of the form
- requirement is to create a better user interface that is cleaner and more pleasing
- to the eye
- -->
-<!-- Hints
-For search utilize the onSearch() method
-for the search values
-(keyup.enter)="onEnterKey()" placeholder="Enter part number, description, or SKU"
-
-Criteria is the value to search
-Part numbers are prefixed with 'AB', 'ZX', 'LM', 'QP', 'RT'
-supplierSku as prefixed with 'SUP', 'VND', 'OEM'
-Description may contain the following words
-'Premium', 'Standard', 'Heavy-Duty', 'Lightweight', 'Compact', 'Industrial', 'Economy'
-'Bearing', 'Valve', 'Coupling', 'Gasket', 'Clamp', 'Fitting', 'Seal', 'Adapter', 'Pump', 'Filter'
-
-branches are 'SEA', 'PDX', 'SFO', 'LAX', 'DEN', 'PHX', 'DAL', 'ORD', 'ATL', 'JFK'
-(change)="onBranchesChange($event)"
-
-Search By
-  <option value="PartNumber">Part Number</option>
-  <option value="Description">Description</option>
-  <option value="SupplierSKU">Supplier SKU</option>
--->
 <div class="inventory-search">
+<section class="search-card">
+    <header>
+      <div>
+        <p class="eyebrow">Quick inventory lookup</p>
+        <h2>Find parts by number, description, or supplier SKU</h2>
+        <p class="hint">Use branch filters or availability to narrow results.</p>
+      </div>
+    </header>
 
-  <!-- this is where the search criteria should probably be displayed  and entered
-  -->
+    <form class="form" [formGroup]="form" (ngSubmit)="onSearch()">
+      <div class="row">
+        <label>
+          <span>Criteria</span>
+          <input formControlName="criteria" (keyup.enter)="onEnterKey()"
+                 placeholder="Enter part number, description, or SKU" />
+        </label>
+
+        <label>
+          <span>Search by</span>
+          <select formControlName="by">
+            <option *ngFor="let opt of byOptions" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+
+        <div class="branch-group" #branchContainer>
+          <div class="branch-header">
+            <span>Branches</span>
+            <small *ngIf="!(form.value.branches?.length)">All branches shown when none selected</small>
+            <small *ngIf="form.value.branches?.length">Filtering {{ form.value.branches.length }} selected</small>
+          </div>
+            <div class="branch-select">
+            <button type="button" class="branch-trigger" (click)="toggleBranchList()" [attr.aria-expanded]="branchListOpen">
+              <span *ngIf="!(form.value.branches?.length)">Select branches (optional)</span>
+              <span *ngIf="form.value.branches?.length">{{ form.value.branches.join(', ') }}</span>
+              <span class="chevron">{{ branchListOpen ? '▾' : '▸' }}</span>
+            </button>
+            <div class="branch-dropdown" *ngIf="branchListOpen">
+              <button
+                type="button"
+                *ngFor="let branch of branches"
+                class="branch-option"
+                (click)="onBranchSelect(branch)">
+                  <span class="checkmark" [class.checked]="(form.value.branches || []).includes(branch)">✓</span>
+                  <span>{{ branch }}</span>
+                </button>
+              </div>
+            </div>
+          <div class="selected-chips" *ngIf="form.value.branches?.length">
+            <span class="chip" *ngFor="let b of form.value.branches">{{ b }}</span>
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" formControlName="onlyAvailable" />
+          <span>Only show available</span>
+        </label>
+
+        <div class="actions">
+          <button class="secondary" type="button" (click)="form.reset({ criteria: '', by: 'PartNumber', branches: [], onlyAvailable: false })">
+            Reset
+          </button>
+          <button class="primary" type="submit" [disabled]="form.invalid || (loading$ | async)">
+            <span *ngIf="!(loading$ | async)">Search</span>
+            <span *ngIf="loading$ | async">Searching...</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
+
   <div class="loading" *ngIf="loading$ | async">Loading…</div>
   <!-- Simple inline error display -->
   <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
