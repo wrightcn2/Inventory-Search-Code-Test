@@ -2,33 +2,113 @@
 
 // SCSS
 .table-wrap {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+
+  .table-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin: 0;
+    }
+    .error {
+      color: #b91c1c;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+    }
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
   }
-  th, td {
-    padding: 0.5rem;
-    border-bottom: 1px solid #ddd;
+  th,
+  td {
+    padding: 0.65rem;
+    border-bottom: 1px solid #e2e8f0;
     text-align: left;
   }
   th {
-    cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    background: #f8fafc;
+    font-weight: 700;
+    color: #0f172a;
+    &.sortable { cursor: pointer; }
+    .sort-indicator {
+      margin-left: 4px;
+      color: #475569;
+      font-size: 0.85rem;
+    }
+  }
+  td {
+    color: #0f172a;
+    &.date {
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      color: #334155;
+    }
   }
   .num { text-align: right; }
   .expander button {
     border: none;
     background: transparent;
     cursor: pointer;
+    font-size: 1rem;
   }
   .expand-row {
-    background: #fafafa;
+    background: #f8fafc;
+  }
+  .expand-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    h4 {
+      margin: 0 0 0.35rem;
+      color: #0f172a;
+    }
+    .muted { color: #64748b; margin: 0; }
+    .lot,
+    .branch {
+      background: #fff;
+      border: 1px dashed #cbd5e1;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      margin-bottom: 0.35rem;
+    }
+    .peak-line { margin: 0.15rem 0; }
+  }
+  .empty {
+    text-align: center;
+    padding: 1rem;
+    color: #64748b;
   }
   .pager {
     display: flex;
     gap: 0.5rem;
     align-items: center;
     margin-top: 0.75rem;
+    button {
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      cursor: pointer;
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
   }
 }
