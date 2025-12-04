@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryServer", "InventoryServer\InventoryServer.csproj", "{54CC9901-AA1B-4215-A127-E4EA4356ED4E}"
 EndProject
+// test project for service-layer unit tests
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryServer.Tests", "InventoryServer.Tests\InventoryServer.Tests.csproj", "{0C62B6A8-52B7-4DF4-91E7-F48224624FD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +15,9 @@ Global
 		{54CC9901-AA1B-4215-A127-E4EA4356ED4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{54CC9901-AA1B-4215-A127-E4EA4356ED4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{54CC9901-AA1B-4215-A127-E4EA4356ED4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C62B6A8-52B7-4DF4-91E7-F48224624FD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C62B6A8-52B7-4DF4-91E7-F48224624FD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C62B6A8-52B7-4DF4-91E7-F48224624FD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C62B6A8-52B7-4DF4-91E7-F48224624FD5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

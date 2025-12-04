@@ -4,7 +4,7 @@
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Inject, Injectable, InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
-import {shareReplay} from 'rxjs/operators';
+import {shareReplay, tap} from 'rxjs/operators';
 import {
   ApiEnvelope,
   InventorySearchQuery,
@@ -47,7 +47,46 @@ export class InventorySearchApiService {
      * this.http.get<??????>(`${this.baseUrl}/inventory/search`, { params })
      */
 
+    //build cache key and evict stale entries
+    const key = this.cacheKey(query);
+    const now = Date.now();
+    this.cache = this.cache.filter(e => e.expiry > now);
 
+    const hit = this.cache.find(e => e.key === key);
+    if (hit) return hit.obs$;
+
+    //build HttpParams
+    let params = new HttpParams()
+      .set('criteria', query.criteria.trim())
+      .set('by', query.by)
+      .set('onlyAvailable', String(!!query.onlyAvailable))
+      .set('page', String(query.page))
+      .set('size', String(query.size));
+
+    if (query.branches?.length) {
+      params = params.set('branches', query.branches.join(','));
+    }
+    if (query.sort?.field) {
+      params = params.set('sort', `${query.sort.field}:${query.sort.direction}`);
+    }
+
+    const obs$ = this.http.get<ApiEnvelope<PagedInventoryResponse>>(
+      `${this.baseUrl}/inventory/search`,
+      { params }
+    ).pipe(
+      tap(res => {
+        if (res.isFailed) {
+          // drop failed responses so callers can retry
+          this.cache = this.cache.filter(e => e.key !== key);
+        }
+      }),
+      // keep last value without refCount reset to allow cache reuse after completion
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+
+    // remember in cache
+    this.remember(this.cache, { key, obs$ });
+    return obs$;
   }
 
   getPeakAvailability(partNumber: string): Observable<ApiEnvelope<PeakAvailability>> {
@@ -61,7 +100,33 @@ export class InventorySearchApiService {
      * this.http.get<??????>(`${this.baseUrl}/inventory/availability/peak`, { params})
      */
 
+    //build cache key and evict stale entries
+    const key = `peak:${partNumber.trim().toUpperCase()}`;
+    const now = Date.now();
+    this.peakCache = this.peakCache.filter(e => e.expiry > now);
 
+    //check for cache hit
+    const hit = this.peakCache.find(e => e.key === key);
+    if (hit) return hit.obs$;
+
+    //build HttpParams
+    const params = new HttpParams().set('partNumber', partNumber.trim());
+    const obs$ = this.http.get<ApiEnvelope<PeakAvailability>>(
+      `${this.baseUrl}/inventory/availability/peak`,
+      { params }
+    ).pipe(
+      tap(res => {
+        if (res.isFailed) {
+          this.peakCache = this.peakCache.filter(e => e.key !== key);
+        }
+      }),
+      // keep last value without refCount reset to allow cache reuse after completion
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+
+    // remember in cache
+    this.remember(this.peakCache, { key, obs$ });
+    return obs$;
   }
 
   /**
@@ -77,6 +142,28 @@ export class InventorySearchApiService {
     entry: { key: string; obs$: Observable<T> }
   ) {
 
+    // Set expiry time
+    const expiry = Date.now() + CACHE_TTL_MS;
+    // Remove expired first
+    let next = cache.filter(c => c.expiry > Date.now());
+    // If at capacity, evict the oldest
+    if (next.length >= CACHE_MAX_ENTRIES) {
+      next = next
+        .sort((a, b) => a.expiry - b.expiry)
+        .slice(next.length - CACHE_MAX_ENTRIES + 1);
+    }
+    // Add new entry
+    next.push({ ...entry, expiry });
+    while (next.length > CACHE_MAX_ENTRIES) {
+      next.shift();
+    }
+    // Assign back to the correct cache
+    if (cache === this.cache) {
+      this.cache = next as CacheEntry<ApiEnvelope<PagedInventoryResponse>>[];
+    } else {
+      this.peakCache = next as CacheEntry<ApiEnvelope<PeakAvailability>>[];
+    }
+
   }
   /**
    * Challenge hint:
@@ -88,6 +175,19 @@ export class InventorySearchApiService {
    */
 
   private cacheKey(q: InventorySearchQuery): string {
-
+    // Normalize and build a unique key string
+    const criteria = q.criteria.trim().toLowerCase();
+    const by = q.by;
+    const branches = [...(q.branches || [])]
+      .map(b => b.trim().toUpperCase())
+      .sort()
+      .join('|');
+    const available = q.onlyAvailable ? '1' : '0';
+    const page = `p${q.page}`;
+    const size = `s${q.size}`;
+    const sort = q.sort?.field
+      ? `${q.sort.field}:${q.sort.direction}`
+      : 'nosort';
+    return [criteria, by, branches, available, page, size, sort].join('::');
   }
 }

@@ -1,27 +1,35 @@
-# Inventory-Search
+# Inventory Search
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.8.
+Angular 18 implementation of the inventory search experience with mock API + UI polish.
 
-## Development server
+## Prereqs
+- Node 18+ (for Angular app and mock server)
+- npm
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Quick start
+1) Install deps
+   - `cd Inventory-Search`
+   - `npm install`
+2) Start the mock API (separate terminal)
+   - `cd ../inventory-mock-api`
+   - `npm install`
+   - `npm start`
+3) Run the Angular app (from `Inventory-Search`)
+   - `npm start`
+   - App: http://localhost:4200
 
-## Code scaffolding
+## Features implemented
+- Reactive form with validation and custom branch multi-select
+- Loading indicator, error messaging, cancel-on-new-search via `switchMap`
+- Sorting, pagination, expandable rows with tabbed “Lots” / “Peak Availability” details
+- Caching: last 5 unique searches and peak calls cached for 60s (see `inventory-search-api.service.ts`)
+- Peak availability fetched on-demand when the tab is opened
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Tools and choices
+- Angular 18 + HttpClient + RxJS for cancellation and caching (`shareReplay`)
+- TypeScript interfaces for all models
+- SCSS for layout/visual refresh
+- Mock API: `inventory-mock-api` (included) for local data
 
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Testing
+- Frontend: `npm test` (Karma/Jasmine)

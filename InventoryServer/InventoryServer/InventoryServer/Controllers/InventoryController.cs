@@ -11,10 +11,13 @@ namespace InventoryServer.Controllers
     [ApiController]
     public class InventoryController : ControllerBase
     {
-// TODO Implement the required code
+        // DI-wired service and config to handle search and peak endpoints
+        private readonly IInventoryService _inventoryService;
+        private readonly IConfiguration _configuration;
         public InventoryController(IInventoryService inventoryService, IConfiguration configuration)
         {
-// TODO Implement the required code
+            _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
+            _configuration = configuration;
         }
 
         [HttpGet("search")]
@@ -28,20 +31,58 @@ namespace InventoryServer.Controllers
             [FromQuery] string sort = "",
             [FromQuery] bool fail = false)
         {
-// TODO Implement the required code
+            if (fail)
+            {
+                return BadRequest(ResponseEnvelope<SearchResult>.Failure("Forced failure (fail=true)"));
+            }
+
+            var request = new InventorySearchRequest
+            {
+                Criteria = criteria ?? string.Empty,
+                By = string.IsNullOrWhiteSpace(by) ? "PartNumber" : by,
+                Branches = branches ?? string.Empty,
+                OnlyAvailable = onlyAvailable,
+                Page = page,
+                Size = size,
+                Sort = sort ?? string.Empty
+            };
+
+            try
+            {
+                var result = await _inventoryService.SearchInventoryAsync(request);
+                return Ok(ResponseEnvelope<SearchResult>.Success(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ResponseEnvelope<SearchResult>.Failure(ex.Message));
+            }
         }
 
         [HttpGet("availability/peak")]
         public async Task<ActionResult<ResponseEnvelope<AvailabilityResult>>> GetPeakAvailability(
             [FromQuery] string partNumber)
         {
-// TODO Implement the required code
+            if (string.IsNullOrWhiteSpace(partNumber))
+            {
+                return BadRequest(ResponseEnvelope<AvailabilityResult>.Failure("partNumber is required"));
+            }
+
+            try
+            {
+                var result = await _inventoryService.GetPeakAvailabilityAsync(partNumber);
+                return Ok(ResponseEnvelope<AvailabilityResult>.Success(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ResponseEnvelope<AvailabilityResult>.Failure(ex.Message));
+            }
         }
 
         [HttpGet("health")]
         public async Task<ActionResult<object>> Health()
         {
-// TODO Implement the required code
+            await Task.CompletedTask;
+            return Ok(new { status = "ok", env = _configuration?["ASPNETCORE_ENVIRONMENT"] ?? "Unknown" });
         }
     }
 }
