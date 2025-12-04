@@ -4,7 +4,7 @@
   <div class="table-meta">
     <div>
       <p class="eyebrow">Results</p>
-      <strong>{{ total }} matches</strong> • Page {{ pageIndex + 1 }} of {{ totalPages(total, pageSize) }}
+      <strong>{{ total }} matches</strong> · Page {{ pageIndex + 1 }} of {{ totalPages(total, pageSize) }}
     </div>
     <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
   </div>
@@ -28,31 +28,41 @@
           <tr>
             <td class="expander">
               <button (click)="toggleExpand(item)" aria-label="expand row">
-                {{ expanded[rowKey(item)] ? '▾' : '▸' }}
+                {{ expanded[rowKey(item)] ? 'v' : '>' }}
               </button>
             </td>
             <td>{{ item.partNumber }}</td>
             <td>{{ item.supplierSku }}</td>
             <td>{{ item.description }}</td>
-            <td>{{ item.branch }}</td>
+            <td><span class="pill">{{ item.branch }}</span></td>
             <td class="num">{{ item.availableQty }}</td>
             <td>{{ item.uom }}</td>
-            <td class="num">{{ item.leadTimeDays ?? '—' }}</td>
-            <td class="date">{{ item.lastPurchaseDate ? (item.lastPurchaseDate | date:'MMM d, y, h:mm a') : '—' }}</td>
-            <td>
-              <button type="button" (click)="onPeakButton(item)" [disabled]="peakLoading[item.partNumber]">
-                <span *ngIf="peakLoading[item.partNumber]">Loading...</span>
-                <span *ngIf="!peakLoading[item.partNumber]">Peak availability</span>
-              </button>
-            </td>
+            <td class="num">{{ item.leadTimeDays ?? '--' }}</td>
+            <td class="date">{{ item.lastPurchaseDate ? (item.lastPurchaseDate | date:'MMM d, y, h:mm a') : '--' }}</td>
+            <td class="muted small-note">Expand row to view</td>
           </tr>
 
           <tr class="expand-row" *ngIf="expanded[rowKey(item)]">
             <td></td>
             <td colspan="9">
-              <div class="expand-content">
-                <div>
-                  <h4>Lots</h4>
+              <div class="expand-content tabs">
+                <div class="tab-buttons">
+                  <button
+                    type="button"
+                    [class.active]="selectedTab[rowKey(item)] === 'lots'"
+                    (click)="selectTab(item, 'lots')">
+                    Lots
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="selectedTab[rowKey(item)] === 'peak'"
+                    (click)="selectTab(item, 'peak')">
+                    Peak Availability
+                    <span class="tab-status" *ngIf="peakLoading[item.partNumber]"> · Fetching</span>
+                  </button>
+                </div>
+
+                <div class="tab-body" *ngIf="selectedTab[rowKey(item)] === 'lots'; else peakTab">
                   <ng-container *ngIf="item.lots?.length; else noLots">
                     <div class="lot" *ngFor="let lot of item.lots">
                       Lot {{ lot.lotNumber }} - Qty {{ lot.qty }} - Exp {{ lot.expirationDate || 'N/A' }}
@@ -63,20 +73,25 @@
                   </ng-template>
                 </div>
 
-                <div>
-                  <h4>Peak availability</h4>
-                  <ng-container *ngIf="peakByPart[item.partNumber]; else noPeak">
-                    <div class="peak-line"><strong>Part:</strong> {{ peakByPart[item.partNumber]?.partNumber || item.partNumber }}</div>
-                    <div class="peak-line"><strong>Total available:</strong> {{ peakByPart[item.partNumber]?.totalAvailable ?? 0 }}</div>
-                    <div class="peak-line"><strong>By branch:</strong></div>
-                    <div class="branch" *ngFor="let b of peakByPart[item.partNumber]?.branches">
-                      {{ b.branch }}: {{ b.qty }}
-                    </div>
-                  </ng-container>
-                  <ng-template #noPeak>
-                    <p class="muted">No peak availability loaded yet.</p>
-                  </ng-template>
-                </div>
+                <ng-template #peakTab>
+                  <div class="tab-body">
+                    <ng-container *ngIf="peakByPart[item.partNumber]; else peakLoad">
+                      <div class="peak-line"><strong>Part:</strong> {{ peakByPart[item.partNumber]?.partNumber || item.partNumber }}</div>
+                      <div class="peak-line"><strong>Total available:</strong> {{ peakByPart[item.partNumber]?.totalAvailable ?? 0 }}</div>
+                      <div class="peak-line"><strong>By branch:</strong></div>
+                      <div class="branch" *ngFor="let b of peakByPart[item.partNumber]?.branches">
+                        {{ b.branch }}: {{ b.qty }}
+                      </div>
+                    </ng-container>
+                    <ng-template #peakLoad>
+                      <p class="muted" *ngIf="peakLoading[item.partNumber]">Fetching peak availability…</p>
+                      <div class="muted" *ngIf="!peakLoading[item.partNumber]">
+                        Not loaded yet.
+                        <button type="button" class="ghost" (click)="fetchPeakAvailability(item)">Load peak</button>
+                      </div>
+                    </ng-template>
+                  </div>
+                </ng-template>
               </div>
             </td>
           </tr>
@@ -93,8 +108,6 @@
     </tr>
   </ng-template>
 
-
-  <!-- Simple pagination controls  -->
   <div class="pager" aria-label="Pagination">
     <button type="button" (click)="goTo(pageIndex - 1)" [disabled]="pageIndex <= 0">Prev</button>
     <span>Page {{ pageIndex + 1 }} / {{ totalPages(total, pageSize) }}</span>
@@ -102,3 +115,4 @@
       Next
     </button>
   </div>
+</div>

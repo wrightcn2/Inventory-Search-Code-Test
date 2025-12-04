@@ -1,7 +1,7 @@
 //components/results-table/results-table.component.ts
 
 // TypeScript
-import {ChangeDetectionStrategy, Component, EventEmitter, Input, Output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, EventEmitter, Input, Output, ChangeDetectorRef} from '@angular/core';
 import {InventoryItem, InventoryItemSortableFields, PeakAvailability} from '../../models/inventory-search.models';
 import { InventorySearchApiService } from '../../services/inventory-search-api.service';
 import { finalize } from 'rxjs/operators';
@@ -24,6 +24,7 @@ export class ResultsTableComponent {
 
   pageIndex = 0;
   expanded: Record<string, boolean> = {};
+  selectedTab: Record<string, 'lots' | 'peak'> = {};
   // Added: keep per-part peak availability and loading state
   peakLoading: Record<string, boolean> = {};
   peakByPart: Record<string, PeakAvailability | null> = {};
@@ -45,6 +46,7 @@ export class ResultsTableComponent {
 
   constructor(
     private readonly api: InventorySearchApiService,
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   onHeaderClick(field: InventoryItemSortableFields) {
@@ -65,6 +67,9 @@ export class ResultsTableComponent {
     // Toggle expanded state for the given item
     const key = this.rowKey(item);
     this.expanded[key] = !this.expanded[key];
+    if (this.expanded[key] && !this.selectedTab[key]) {
+      this.selectedTab[key] = 'lots';
+    }
   }
 
 
@@ -72,36 +77,38 @@ export class ResultsTableComponent {
   fetchPeakAvailability(item: InventoryItem) {
     const key = item.partNumber;
     if (this.peakLoading[key]) return;
-    this.peakLoading[key] = true;
+    this.peakLoading = { ...this.peakLoading, [key]: true };
     this.errorMessage = null;
 
     this.api.getPeakAvailability(item.partNumber)
-      .pipe(finalize(() => { this.peakLoading[key] = false; }))
+      .pipe(finalize(() => {
+        this.peakLoading = { ...this.peakLoading, [key]: false };
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: res => {
           if (res.isFailed || !res.data) {
             this.errorMessage = `Failed to load peak availability${res.message ? ': ' + res.message : ''}`;
-            this.peakByPart[key] = null;
+            this.peakByPart = { ...this.peakByPart, [key]: null };
+            this.cdr.markForCheck();
             return;
           }
-          this.peakByPart[key] = res.data;
+          this.peakByPart = { ...this.peakByPart, [key]: res.data };
+          this.cdr.markForCheck();
         },
         error: err => {
           this.errorMessage = 'Failed to load peak availability';
-          this.peakByPart[key] = null;
+          this.peakByPart = { ...this.peakByPart, [key]: null };
+          this.cdr.markForCheck();
         }
       });
   }
 
-  // Convenience: fetch and expand inline panel
-  onPeakButton(item: InventoryItem) {
-
+  selectTab(item: InventoryItem, tab: 'lots' | 'peak') {
     const key = this.rowKey(item);
-    if (!this.peakByPart[item.partNumber]) {
+    this.selectedTab[key] = tab;
+    if (tab === 'peak' && !this.peakByPart[item.partNumber] && !this.peakLoading[item.partNumber]) {
       this.fetchPeakAvailability(item);
-    }
-    if (!this.expanded[key]) {
-      this.expanded[key] = true;
     }
   }
 

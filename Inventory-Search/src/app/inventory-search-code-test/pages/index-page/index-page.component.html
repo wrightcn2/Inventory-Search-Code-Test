@@ -2,78 +2,87 @@
 
 <!-- HTML -->
 <div class="inventory-search">
-<section class="search-card">
-    <header>
-      <div>
-        <p class="eyebrow">Quick inventory lookup</p>
+  <section class="search-card">
+    <header class="card-header">
+      <div class="title-block">
+        <p class="eyebrow">Inventory lookup</p>
         <h2>Find parts by number, description, or supplier SKU</h2>
-        <p class="hint">Use branch filters or availability to narrow results.</p>
+        <p class="hint">Use branches and availability to zero in on what is in stock.</p>
+      </div>
+      <div class="summary-chip">
+        <span class="dot"></span>
+        Live data
       </div>
     </header>
 
-    <form class="form" [formGroup]="form" (ngSubmit)="onSearch()">
-      <div class="row">
-        <label>
-          <span>Criteria</span>
-          <input formControlName="criteria" (keyup.enter)="onEnterKey()"
-                 placeholder="Enter part number, description, or SKU" />
-        </label>
+    <form class="form-grid" [formGroup]="form" (ngSubmit)="onSearch()">
+      <div class="field criteria-field">
+        <label for="criteria">Criteria</label>
+        <input
+          id="criteria"
+          formControlName="criteria"
+          (keyup.enter)="onEnterKey()"
+          placeholder="Enter part number, description, or SKU" />
+        <small>Press Enter to search quickly</small>
+      </div>
 
-        <label>
-          <span>Search by</span>
-          <select formControlName="by">
+      <div class="field select-field">
+        <label for="by">Search by</label>
+        <div class="select-wrap">
+          <select id="by" formControlName="by">
             <option *ngFor="let opt of byOptions" [value]="opt.value">{{ opt.label }}</option>
           </select>
-        </label>
-
-        <div class="branch-group" #branchContainer>
-          <div class="branch-header">
-            <span>Branches</span>
-            <small *ngIf="!(form.value.branches?.length)">All branches shown when none selected</small>
-            <small *ngIf="form.value.branches?.length">Filtering {{ form.value.branches.length }} selected</small>
-          </div>
-            <div class="branch-select">
-            <button type="button" class="branch-trigger" (click)="toggleBranchList()" [attr.aria-expanded]="branchListOpen">
-              <span *ngIf="!(form.value.branches?.length)">Select branches (optional)</span>
-              <span *ngIf="form.value.branches?.length">{{ form.value.branches.join(', ') }}</span>
-              <span class="chevron">{{ branchListOpen ? '▾' : '▸' }}</span>
-            </button>
-            <div class="branch-dropdown" *ngIf="branchListOpen">
-              <button
-                type="button"
-                *ngFor="let branch of branches"
-                class="branch-option"
-                (click)="onBranchSelect(branch)">
-                  <span class="checkmark" [class.checked]="(form.value.branches || []).includes(branch)">✓</span>
-                  <span>{{ branch }}</span>
-                </button>
-              </div>
-            </div>
-          <div class="selected-chips" *ngIf="form.value.branches?.length">
-            <span class="chip" *ngFor="let b of form.value.branches">{{ b }}</span>
-          </div>
+          <span class="select-caret">v</span>
         </div>
+      </div>
 
-        <label class="checkbox">
+      <div class="field branch-group branches-field" #branchContainer>
+        <div class="field-label-row">
+          <label>Branches</label>
+          <small *ngIf="!(form.value.branches?.length)">Showing all when none selected</small>
+          <small *ngIf="form.value.branches?.length">{{ form.value.branches.length }} selected</small>
+        </div>
+        <button type="button" class="branch-trigger" (click)="toggleBranchList()" [attr.aria-expanded]="branchListOpen">
+          <span *ngIf="!(form.value.branches?.length)">Select branches (optional)</span>
+          <span class="chip-list" *ngIf="form.value.branches?.length">
+            <span class="chip" *ngFor="let b of form.value.branches">{{ b }}</span>
+          </span>
+          <span class="chevron">{{ branchListOpen ? '^' : 'v' }}</span>
+        </button>
+        <div class="branch-dropdown" *ngIf="branchListOpen">
+          <button
+            type="button"
+            *ngFor="let branch of branches"
+            class="branch-option"
+            (click)="onBranchSelect(branch)">
+              <span class="checkmark" [class.checked]="(form.value.branches || []).includes(branch)">✔</span>
+              <span>{{ branch }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="field checkbox">
+        <label>
           <input type="checkbox" formControlName="onlyAvailable" />
           <span>Only show available</span>
         </label>
+        <small>Filters to items with stock on hand</small>
+      </div>
 
-        <div class="actions">
-          <button class="secondary" type="button" (click)="form.reset({ criteria: '', by: 'PartNumber', branches: [], onlyAvailable: false })">
-            Reset
-          </button>
-          <button class="primary" type="submit" [disabled]="form.invalid || (loading$ | async)">
-            <span *ngIf="!(loading$ | async)">Search</span>
-            <span *ngIf="loading$ | async">Searching...</span>
-          </button>
-        </div>
+      <div class="actions">
+        <button class="secondary" type="button" (click)="form.reset({ criteria: '', by: 'PartNumber', branches: [], onlyAvailable: false })">
+          <span class="btn-icon">↺</span> Reset
+        </button>
+        <button class="primary" type="submit" [disabled]="form.invalid || (loading$ | async)">
+          <span class="btn-icon">🔍︎</span>
+          <span *ngIf="!(loading$ | async)">Search</span>
+          <span *ngIf="loading$ | async">Searching...</span>
+        </button>
       </div>
     </form>
   </section>
 
-  <div class="loading" *ngIf="loading$ | async">Loading…</div>
-  <!-- Simple inline error display -->
+  <div class="loading" *ngIf="loading$ | async">Loading results…</div>
   <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <inventory-results-table
